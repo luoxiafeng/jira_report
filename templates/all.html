@@ -5,5 +5,8 @@
 
 {% block content %}
 <h3>All Page Content</h3>
-<p>This is the All specific content.</p>
+<p>This page shows the statistics of all stories, including completed and incomplete ones.</p>
+
+<!-- 显示柱状图和饼图 -->
+<img src="data:image/png;base64,{{ plot_url }}" alt="Story Statistics">
 {% endblock %}
