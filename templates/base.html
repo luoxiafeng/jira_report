@@ -1,0 +1,104 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}JIRA Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            background-color: #f8f9fa;
+            overflow-y: auto;
+            border-right: 1px solid #dee2e6;
+        }
+        .main-content {
+            margin-left: 210px; /* 调整主内容区的左边距以适应侧边栏 */
+            padding: 20px;
+        }
+        .menu a {
+            border: 1px solid red;
+            background-color: transparent;
+            padding: 5px 10px;
+            cursor: pointer;
+            text-decoration: none;
+            color: black;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .sortable:after {
+            content: " ▲";
+            font-size: 0.8em;
+        }
+        .sortable.sorted-desc:after {
+            content: " ▼";
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h5>JIRA Projects</h5>
+        <ul class="nav flex-column">
+            {% for project in projects %}
+            <li class="nav-item">
+                <a class="nav-link" href="#">{{ project.name }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+        <div class="menu">
+            <a href="{{ url_for('bsp_page') }}">BSP</a>
+            <a href="{{ url_for('sdp_page') }}">SDP</a>
+            <a href="{{ url_for('all_page') }}">ALL</a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <script>
+        function sortTable(columnIndex) {
+            const table = document.getElementById("issuesTable");
+            const rows = Array.from(table.rows).slice(1); // 获取所有行，排除表头
+            const header = table.rows[0].cells[columnIndex];
+            const isSorted = header.classList.contains('sorted-desc');
+
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.cells[columnIndex].textContent.trim();
+                const cellB = rowB.cells[columnIndex].textContent.trim();
+                
+                if (!isNaN(Date.parse(cellA)) && !isNaN(Date.parse(cellB))) {
+                    // 按日期排序
+                    return new Date(cellA) - new Date(cellB);
+                } else if (!isNaN(cellA) && !isNaN(cellB)) {
+                    // 按数值排序
+                    return cellA - cellB;
+                } else {
+                    // 按文本排序
+                    return cellA.localeCompare(cellB);
+                }
+            });
+
+            if (isSorted) {
+                rows.reverse(); // 切换为降序
+                header.classList.remove('sorted-desc');
+            } else {
+                header.classList.add('sorted-desc');
+            }
+
+            // 重新排列行
+            rows.forEach(row => table.tBodies[0].appendChild(row));
+        }
+    </script>
+</body>
+</html>

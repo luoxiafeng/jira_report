@@ -1,140 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>JIRA Dashboard</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        .sidebar {
-            height: 100vh;
-            overflow-y: auto;
-        }
-        .header {
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .menu {
-            display: flex;
-            gap: 10px;
-        }
-        .menu a {
-            border: 1px solid red;
-            background-color: transparent;
-            padding: 5px 10px;
-            cursor: pointer;
-            text-decoration: none;
-            color: black;
-        }
-        .content {
-            padding: 20px;
-        }
-        .sortable:after {
-            content: " ▲";
-            font-size: 0.8em;
-        }
-        .sortable.sorted-desc:after {
-            content: " ▼";
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- 左侧侧边栏 -->
-            <nav class="col-md-2 d-none d-md-block bg-light sidebar">
-                <div class="sidebar-sticky">
-                    <h5>JIRA Projects</h5>
-                    <ul class="nav flex-column">
-                        {% for project in projects %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                {{ project.name }}
-                            </a>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </nav>
+<!-- templates/index.html -->
+{% extends 'base.html' %}
 
-            <!-- 主内容区 -->
-            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
-                <!-- 顶部 JIRA 面板 -->
-                <div class="header">
-                    <h3>JIRA Panel</h3>
-                    <div class="menu">
-                        <a href="{{ url_for('bsp_page') }}">BSP</a>
-                        <a href="{{ url_for('sdp_page') }}">SDP</a>
-                        <a href="{{ url_for('all_page') }}">ALL</a>
-                    </div>
-                </div>
+{% block title %}JIRA Dashboard - Home{% endblock %}
 
-                <!-- JIRA Issues 列表 -->
-                <div class="content">
-                    <h5>Issues in RDC: Wangshu SDK</h5>
-                    <table class="table table-striped" id="issuesTable">
-                        <thead>
-                            <tr>
-                                <th class="sortable" onclick="sortTable(0)">Summary</th>
-                                <th class="sortable" onclick="sortTable(1)">Priority</th>
-                                <th class="sortable" onclick="sortTable(2)">Status</th>
-                                <th class="sortable" onclick="sortTable(3)">Creator</th>
-                                <th class="sortable" onclick="sortTable(4)">Created Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for issue in issues %}
-                            <tr>
-                                <td>{{ issue.fields.summary }}</td>
-                                <td>{{ issue.fields.priority.name }}</td>
-                                <td>{{ issue.fields.status.name }}</td>
-                                <td>{{ issue.fields.creator.displayName }}</td>
-                                <td>{{ issue.fields.created }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </main>
-        </div>
-    </div>
-
-    <script>
-        function sortTable(columnIndex) {
-            const table = document.getElementById("issuesTable");
-            const rows = Array.from(table.rows).slice(1); // 获取所有行，排除表头
-            const header = table.rows[0].cells[columnIndex];
-            const isSorted = header.classList.contains('sorted-desc');
-
-            rows.sort((rowA, rowB) => {
-                const cellA = rowA.cells[columnIndex].textContent.trim();
-                const cellB = rowB.cells[columnIndex].textContent.trim();
-                
-                if (!isNaN(Date.parse(cellA)) && !isNaN(Date.parse(cellB))) {
-                    // 按日期排序
-                    return new Date(cellA) - new Date(cellB);
-                } else if (!isNaN(cellA) && !isNaN(cellB)) {
-                    // 按数值排序
-                    return cellA - cellB;
-                } else {
-                    // 按文本排序
-                    return cellA.localeCompare(cellB);
-                }
-            });
-
-            if (isSorted) {
-                rows.reverse(); // 切换为降序
-                header.classList.remove('sorted-desc');
-            } else {
-                header.classList.add('sorted-desc');
-            }
-
-            // 重新排列行
-            rows.forEach(row => table.tBodies[0].appendChild(row));
-        }
-    </script>
-</body>
-</html>
+{% block content %}
+<h5>Issues in RDC: Wangshu SDK</h5>
+<table class="table table-striped" id="issuesTable">
+    <thead>
+        <tr>
+            <th class="sortable" onclick="sortTable(0)">Summary</th>
+            <th class="sortable" onclick="sortTable(1)">Priority</th>
+            <th class="sortable" onclick="sortTable(2)">Status</th>
+            <th class="sortable" onclick="sortTable(3)">Creator</th>
+            <th class="sortable" onclick="sortTable(4)">Created Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for issue in issues %}
+        <tr>
+            <td>{{ issue.fields.summary }}</td>
+            <td>{{ issue.fields.priority.name }}</td>
+            <td>{{ issue.fields.status.name }}</td>
+            <td>{{ issue.fields.creator.displayName }}</td>
+            <td>{{ issue.fields.created }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -23,17 +23,14 @@ def home():
 
 @app.route('/bsp')
 def bsp_page():
-    # 示例代码，显示 BSP 相关内容
     return render_template('bsp.html', projects=projects)
 
 @app.route('/sdp')
 def sdp_page():
-    # 示例代码，显示 SDP 相关内容
     return render_template('sdp.html', projects=projects)
 
 @app.route('/all')
 def all_page():
-    # 示例代码，显示 All 相关内容
     return render_template('all.html', projects=projects)
 
 if __name__ == '__main__':
