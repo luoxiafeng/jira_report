@@ -1,0 +1,71 @@
+<!-- templates/project_stats.html -->
+{% extends 'base.html' %}
+
+{% block title %}Project Statistics{% endblock %}
+
+{% block content %}
+<h3>Statistics for Project: {{ project_name }}</h3>
+<p>This page shows the statistics of all stories, including completed and incomplete ones for the selected project.</p>
+
+<!-- 显示柱状图和饼图 -->
+<img src="data:image/png;base64,{{ plot_url }}" alt="Story Statistics">
+
+<!-- 显示 Epic 完成情况表格 -->
+<h4>Epic 完成情况</h4>
+<table class="table table-striped" id="epicTable">
+    <thead>
+        <tr>
+            <th onclick="sortTable(0)">Issue Key</th>
+            <th onclick="sortTable(1)">Summary</th>
+            <th onclick="sortTable(2)">Status</th>
+            <th onclick="sortTable(3)">Target Version</th>
+            <th onclick="sortTable(4)">Story Count</th>
+            <th onclick="sortTable(5)">Completion Percentage</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for epic in epic_data %}
+        <tr>
+            <td>{{ epic['Issue Key'] }}</td>
+            <td>{{ epic['Summary'] }}</td>
+            <td>{{ epic['Status'] }}</td>
+            <td>{{ epic['Target Version'] }}</td>
+            <td>{{ epic['Story Count'] }}</td>
+            <td>{{ epic['Completion Percentage'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    function sortTable(columnIndex) {
+        const table = document.getElementById("epicTable");
+        const rows = Array.from(table.rows).slice(1);
+        const header = table.rows[0].cells[columnIndex];
+        const isSorted = header.classList.contains('sorted-desc');
+
+        rows.sort((rowA, rowB) => {
+            const cellA = rowA.cells[columnIndex].textContent.trim();
+            const cellB = rowB.cells[columnIndex].textContent.trim();
+            
+            if (!isNaN(Date.parse(cellA)) && !isNaN(Date.parse(cellB))) {
+                return new Date(cellA) - new Date(cellB);
+            } else if (!isNaN(cellA) && !isNaN(cellB)) {
+                return cellA - cellB;
+            } else {
+                return cellA.localeCompare(cellB);
+            }
+        });
+
+        if (isSorted) {
+            rows.reverse();
+            header.classList.remove('sorted-desc');
+        } else {
+            header.classList.add('sorted-desc');
+        }
+
+        rows.forEach(row => table.tBodies[0].appendChild(row));
+    }
+</script>
+
+{% endblock %}

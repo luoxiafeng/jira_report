@@ -15,6 +15,7 @@
             background-color: #f8f9fa;
             overflow-y: auto;
             border-right: 1px solid #dee2e6;
+            padding-top: 10px;
         }
         .main-content {
             margin-left: 210px; /* 调整主内容区的左边距以适应侧边栏 */
@@ -35,22 +36,34 @@
             padding: 10px;
             border-bottom: 1px solid #dee2e6;
         }
-        .sortable:after {
-            content: " ▲";
-            font-size: 0.8em;
+        .project-button {
+            width: 100%;
+            margin-bottom: 5px;
+            text-align: left;
+            background-color: #87CEEB; /* 设置天蓝色背景 */
+            border: none;
+            color: #333; /* 文字颜色 */
+            font-size: 14px; /* 字体大小 */
+            padding: 10px; /* 内边距 */
+            cursor: pointer;
+            transition: background-color 0.3s; /* 平滑过渡效果 */
         }
-        .sortable.sorted-desc:after {
-            content: " ▼";
+        .project-button:hover {
+            background-color: #00BFFF; /* 鼠标悬停时变为深一点的蓝色 */
         }
     </style>
 </head>
 <body>
     <div class="sidebar">
         <h5>JIRA Projects</h5>
+        <!-- 将每个项目显示为按钮 -->
         <ul class="nav flex-column">
             {% for project in projects %}
             <li class="nav-item">
-                <a class="nav-link" href="#">{{ project.name }}</a>
+                <form action="{{ url_for('project_stats') }}" method="get">
+                    <input type="hidden" name="project_name" value="{{ project.name }}">
+                    <button type="submit" class="btn project-button">{{ project.name }}</button>
+                </form>
             </li>
             {% endfor %}
         </ul>
@@ -65,40 +78,5 @@
         {% block content %}
         {% endblock %}
     </div>
-
-    <script>
-        function sortTable(columnIndex) {
-            const table = document.getElementById("issuesTable");
-            const rows = Array.from(table.rows).slice(1); // 获取所有行，排除表头
-            const header = table.rows[0].cells[columnIndex];
-            const isSorted = header.classList.contains('sorted-desc');
-
-            rows.sort((rowA, rowB) => {
-                const cellA = rowA.cells[columnIndex].textContent.trim();
-                const cellB = rowB.cells[columnIndex].textContent.trim();
-                
-                if (!isNaN(Date.parse(cellA)) && !isNaN(Date.parse(cellB))) {
-                    // 按日期排序
-                    return new Date(cellA) - new Date(cellB);
-                } else if (!isNaN(cellA) && !isNaN(cellB)) {
-                    // 按数值排序
-                    return cellA - cellB;
-                } else {
-                    // 按文本排序
-                    return cellA.localeCompare(cellB);
-                }
-            });
-
-            if (isSorted) {
-                rows.reverse(); // 切换为降序
-                header.classList.remove('sorted-desc');
-            } else {
-                header.classList.add('sorted-desc');
-            }
-
-            // 重新排列行
-            rows.forEach(row => table.tBodies[0].appendChild(row));
-        }
-    </script>
 </body>
 </html>
