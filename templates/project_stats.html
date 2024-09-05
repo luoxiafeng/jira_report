@@ -55,9 +55,35 @@
     </table>
 </div>
 
+<!-- Sprint 完成情况 -->
+<h4 onclick="toggleVisibility('sprintSection')" style="cursor: pointer; color: blue;">Sprint 完成情况</h4>
+<div id="sprintSection" style="display: none;">
+    <img src="data:image/png;base64,{{ sprint_plot_url }}" alt="Sprint Statistics">
+    <table class="table table-striped" id="sprintTable">
+        <thead>
+            <tr>
+                <th>Sprint Name</th>
+                <th>Total Stories</th>
+                <th>Completed Stories</th>
+                <th>Moved to Next Sprint</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sprint in sprint_data %}
+            <tr class="sprint-row">
+                <td>{{ sprint['Sprint Name'] }}</td>
+                <td>{{ sprint['Total Stories'] }}</td>
+                <td>{{ sprint['Completed Stories'] }}</td>
+                <td>{{ sprint['Moved to Next Sprint'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 <style>
     /* 悬停时改变表格行的背景色为天蓝色 */
-    .epic-row:hover {
+    .epic-row:hover, .sprint-row:hover {
         background-color: #87CEEB; /* 天蓝色 */
         transition: background-color 0.3s; /* 添加过渡效果 */
     }
