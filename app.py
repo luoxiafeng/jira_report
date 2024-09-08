@@ -181,17 +181,21 @@ def project_stats():
         return "Project name not found", 400
 
     try:
-        # 获取所有故事
         jql = f"issuetype = Story AND project = '{project_name}'"
         all_stories_issues = get_issues(jira, jql)
 
-        # 已完成和未完成的故事数量
-        done_stories = sum(1 for issue in all_stories_issues if issue.fields.status.name.lower() == 'done')
+        done_stories = sum(1 for issue in all_stories_issues if hasattr(issue.fields, 'status') and issue.fields.status.name.lower() == 'done')
         not_done_stories = len(all_stories_issues) - done_stories
         all_stories = len(all_stories_issues)
 
         epic_data, epic_statistics = get_epic_data(project_name)
         sprint_data = get_sprint_data(project_name)
+
+        # 筛选出 Sprint 不为空且状态未完成的 Story
+        stories_with_sprints = []
+        for story in all_stories_issues:
+            if hasattr(story.fields, 'sprint') and story.fields.sprint and hasattr(story.fields, 'status') and story.fields.status.name.lower() != 'done':
+                stories_with_sprints.append(story)
 
         # 创建 Story 图表
         story_plot_url = create_story_plot(project_name, all_stories, done_stories, not_done_stories)
@@ -214,13 +218,12 @@ def project_stats():
             ax3.text(bar.get_x() + bar.get_width() / 2, height, f'{int(height)}', 
                      ha='center', va='bottom', fontsize=10, color='black')
 
-        # 确保 explode 和 colors 已正确定义
         epic_sizes = [epic_statistics['completed'], epic_statistics['incomplete']]
         epic_labels = ['Completed', 'Incomplete']
-        explode = (0.1, 0)  # 确保定义 explode
-        colors = ['green', 'red']  # 确保定义 colors
+        explode = (0.1, 0)
+        colors = ['green', 'red']
 
-        if sum(epic_sizes) > 0:  # 确保至少有一个非零大小
+        if sum(epic_sizes) > 0:
             ax4.pie(epic_sizes, explode=explode, labels=epic_labels, autopct='%1.1f%%', colors=colors, 
                     shadow=True, startangle=140)
             ax4.set_title('Epic Completion Percentage')
@@ -244,24 +247,23 @@ def project_stats():
         sprint_names = [sprint['Sprint Name'] for sprint in sprint_data]
         total_stories = [sprint['Total Stories'] for sprint in sprint_data]
         completed_stories = [sprint['Completed Stories'] for sprint in sprint_data]
-        incomplete_stories = [total - completed for total, completed in zip(total_stories, completed_stories)]
 
-        # 绘制柱状图
+        # 绘制柱状图，只显示总数和已完成数
         bars_total = ax5.bar(sprint_names, total_stories, label='Total Stories', color='lightblue')
         bars_completed = ax5.bar(sprint_names, completed_stories, label='Completed Stories', color='green')
 
-        # 在柱状图上标记Story数量
-        for bar, total, completed in zip(bars_total, total_stories, completed_stories):
-            height = bar.get_height()
-            ax5.text(bar.get_x() + bar.get_width() / 2, height, f'{int(total)}', 
-                    ha='center', va='bottom', fontsize=10, color='black')
+        # 在柱状图上标记Story数量和完成百分比
+        for bar_total, bar_completed, total, completed in zip(bars_total, bars_completed, total_stories, completed_stories):
+            height_total = bar_total.get_height()
+            height_completed = bar_completed.get_height()
 
-        # 标记已完成和未完成的数量以及百分比
-        for i, (total, completed) in enumerate(zip(total_stories, completed_stories)):
-            ax5.text(i, completed / 2, f'{completed}\n({completed / total * 100:.1f}%)', 
-                    ha='center', va='center', fontsize=10, color='white')
-            ax5.text(i, completed + (total - completed) / 2, f'{total - completed}', 
-                    ha='center', va='center', fontsize=10, color='black')
+            ax5.text(bar_total.get_x() + bar_total.get_width() / 2, height_total, f'{total}', 
+                    ha='center', va='bottom', fontsize=10, color='black')
+            
+            if total > 0:
+                completion_percentage = (completed / total * 100)
+                ax5.text(bar_completed.get_x() + bar_completed.get_width() / 2, height_completed, 
+                         f'{completion_percentage:.1f}%', ha='center', va='center', fontsize=10, color='white')
 
         ax5.set_ylabel('Count')
         ax5.set_title('Sprint Completion Statistics')
@@ -276,12 +278,15 @@ def project_stats():
 
         return render_template('project_stats.html', projects=projects, project_name=project_name, 
                                story_plot_url=story_plot_url, epic_plot_url=epic_plot_url, sprint_plot_url=sprint_plot_url, 
-                               epic_data=epic_data, sprint_data=sprint_data)
+                               epic_data=epic_data, sprint_data=sprint_data, stories_with_sprints=stories_with_sprints)
     except JIRAError as e:
         print(f"Error generating project statistics: {e}")
         if "HTTP 502" in str(e):
             return "The JIRA server is currently unavailable (HTTP 502). Please try again later.", 502
         return "An error occurred while generating the project statistics. Please try again later.", 500
+
+
+
 
 
 if __name__ == '__main__':
