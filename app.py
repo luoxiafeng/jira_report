@@ -49,7 +49,7 @@ def get_boards(project_name=None):
         print(f"Error fetching boards: {e}")
         return []
 
-def get_issues(jira, jql):
+def get_issues_old(jira, jql):
     """Fetch issues based on JQL without retries."""
     try:
         all_issues = []
@@ -62,23 +62,54 @@ def get_issues(jira, jql):
         print(f"Error fetching issues with JQL {jql}: {e}")
         return []  # 返回空列表或部分结果
 
+
+def get_issues(jira, jql, cache={}):
+    # 检查查询结果是否已经缓存
+    if jql in cache:
+        print(f"Returning cached results for JQL: {jql}")
+        return cache[jql]
+
+    try:
+        all_issues = []
+        start_at = 0
+        max_results = 1000  # 每次获取的最大数量
+        
+        # 执行远程查询
+        issues = jira.search_issues(jql, startAt=start_at, maxResults=max_results)
+        all_issues.extend(issues)
+
+        # 将查询结果缓存
+        cache[jql] = all_issues
+        
+        return all_issues
+    except JIRAError as e:
+        print(f"Error fetching issues with JQL {jql}: {e}")
+        return []  # 返回空列表或部分结果
+
+
 def get_epic_data(project_name):
     try:
+        # 获取所有的 Epics
         jql = f"issuetype = Epic AND project = '{project_name}'"
         epics = get_issues(jira, jql)
 
+        # 预先获取所有与该项目相关的 Stories
+        all_stories_jql = f'issuetype = Story AND project = "{project_name}"'
+        all_stories = get_issues(jira, all_stories_jql)
+
         epic_data = []
         completed_epics = 0
+
         for epic in epics:
             issue_key = epic.key
             summary = epic.fields.summary
             status = epic.fields.status.name.lower()  # 统一转换为小写
             target_version = getattr(epic.fields, 'customfield_10007', 'N/A')
             
-            stories_jql = f'"Epic Link" = {issue_key}'
-            stories = get_issues(jira, stories_jql)
-            story_count = len(stories)
-            completed_stories = sum(1 for story in stories if story.fields.status.name.lower() == 'done')
+            # 从已获取的所有 stories 中筛选与当前 epic 相关的 stories
+            epic_stories = [story for story in all_stories if getattr(story.fields, 'customfield_10008', None) == issue_key]
+            story_count = len(epic_stories)
+            completed_stories = sum(1 for story in epic_stories if story.fields.status.name.lower() == 'done')
             completion_percentage = (completed_stories / story_count * 100) if story_count > 0 else 0
             
             if status == 'done':
@@ -103,6 +134,7 @@ def get_epic_data(project_name):
     except Exception as e:
         print(f"Error fetching epic data for project {project_name}: {e}")
         return [], {'total': 0, 'completed': 0, 'incomplete': 0}
+
 
 def get_sprint_data(project_name):
     try:
