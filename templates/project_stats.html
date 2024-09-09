@@ -80,29 +80,11 @@
         </tbody>
     </table>
 </div>
-<!-- 添加部分以显示筛选出的故事 -->
-<h4 onclick="toggleVisibility('sprintStoriesSection')" style="cursor: pointer; color: blue;">Sprint 未完成的 Story</h4>
-<div id="sprintStoriesSection" style="display: none;">
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Issue Key</th>
-                <th>Summary</th>
-                <th>Sprint</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for story in stories_with_sprints %}
-            <tr>
-                <td>{{ story.key }}</td>
-                <td>{{ story.fields.summary }}</td>
-                <td>{{ story.fields.sprint }}</td>
-                <td>{{ story.fields.status.name }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+<!-- Delivery 完成情况 -->
+<h4 onclick="toggleVisibility('deliverySection')" style="cursor: pointer; color: blue;">Delivery 完成情况</h4>
+<div id="deliverySection" style="display: none;">
+    <img src="data:image/png;base64,{{ delivery_plot_url }}" alt="Delivery Statistics">
 </div>
 
 <style>

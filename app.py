@@ -5,6 +5,7 @@ import matplotlib
 import io
 import base64
 from jira.exceptions import JIRAError
+import collections
 
 # 禁用 Matplotlib 的 GUI 后端
 matplotlib.use('Agg')
@@ -62,7 +63,6 @@ def get_issues_old(jira, jql):
         print(f"Error fetching issues with JQL {jql}: {e}")
         return []  # 返回空列表或部分结果
 
-
 def get_issues(jira, jql, cache={}):
     # 检查查询结果是否已经缓存
     if jql in cache:
@@ -85,7 +85,6 @@ def get_issues(jira, jql, cache={}):
     except JIRAError as e:
         print(f"Error fetching issues with JQL {jql}: {e}")
         return []  # 返回空列表或部分结果
-
 
 def get_epic_data(project_name):
     try:
@@ -130,10 +129,10 @@ def get_epic_data(project_name):
             'incomplete': len(epics) - completed_epics
         }
 
-        return epic_data, epic_statistics
+        return epics, epic_data, epic_statistics
     except Exception as e:
         print(f"Error fetching epic data for project {project_name}: {e}")
-        return [], {'total': 0, 'completed': 0, 'incomplete': 0}
+        return [], [], {'total': 0, 'completed': 0, 'incomplete': 0}
 
 
 def get_sprint_data(project_name):
@@ -171,6 +170,87 @@ def get_sprint_data(project_name):
         print(f"Error fetching sprint data for project {project_name}: {e}")
         return []
 
+def get_delivery_data(epics):
+    """
+    统计每个 Epic 的 label 及其完成情况。
+
+    Parameters:
+    epics : list
+        所有的 Epic 问题列表。
+
+    Returns:
+    dict
+        各 label 对应的统计数据。
+    """
+    label_data = collections.defaultdict(lambda: {'total': 0, 'completed': 0})
+
+    # 统计每个 Epic 的 label 和对应的完成情况
+    for epic in epics:
+        labels = getattr(epic.fields, 'labels', [])
+        status = epic.fields.status.name.lower()  # 将状态转为小写方便比较
+
+        if labels:
+            for label in labels:
+                # 统计 Epic 数量
+                label_data[label]['total'] += 1
+                # 如果 Epic 状态为 'done' 则计入完成的数量
+                if status == 'done':
+                    label_data[label]['completed'] += 1
+
+    return label_data
+
+
+def create_delivery_plot(label_data):
+    """
+    根据 label 数据创建 Delivery 完成情况的柱状图。
+
+    Parameters:
+    label_data : dict
+        各 label 对应的统计数据。
+
+    Returns:
+    str
+        图像的 Base64 编码 URL。
+    """
+    labels = list(label_data.keys())
+    total_counts = [data['total'] for data in label_data.values()]
+    completed_counts = [data['completed'] for data in label_data.values()]
+    completion_percentages = [completed / total * 100 if total > 0 else 0 
+                              for completed, total in zip(completed_counts, total_counts)]
+
+    fig, ax = plt.subplots(figsize=(12, 8))
+    fig.suptitle('Delivery 完成情况', fontsize=16, fontweight='bold')
+
+    bars = ax.bar(labels, total_counts, color='lightblue', label='Total Epics')
+    ax.bar(labels, completed_counts, color='green', label='Completed Epics')
+
+    # 标记每个柱子的完成数量、总数和百分比
+    for bar, total, completed, percentage in zip(bars, total_counts, completed_counts, completion_percentages):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, height, f'{completed}/{total} ({percentage:.1f}%)', 
+                ha='center', va='bottom', fontsize=10, color='black')
+
+    ax.set_xlabel('Labels')
+    ax.set_ylabel('Epic Count')
+    ax.set_title('Epic Completion by Label')
+
+    # 旋转标签并调整边距
+    ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=10)
+    plt.xticks(rotation=45, ha='right')
+    fig.tight_layout(pad=3.0)  # 调整布局以避免标签被截断
+    ax.legend()
+
+    # 保存图表
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    delivery_plot_url = base64.b64encode(buf.getvalue()).decode('utf8')
+    plt.close()
+
+    return delivery_plot_url
+
+
+
 def create_story_plot(project_name, all_stories, done_stories, not_done_stories):
     fig, ax = plt.subplots(figsize=(8, 6))
     fig.suptitle('Story 完成情况', fontsize=16, fontweight='bold')
@@ -205,6 +285,7 @@ def create_story_plot(project_name, all_stories, done_stories, not_done_stories)
 def home():
     return render_template('index.html', projects=projects)
 
+
 @app.route('/project_stats')
 def project_stats():
     project_name = request.args.get('project_name')
@@ -213,15 +294,24 @@ def project_stats():
         return "Project name not found", 400
 
     try:
+        # 获取所有与项目相关的 Stories
         jql = f"issuetype = Story AND project = '{project_name}'"
         all_stories_issues = get_issues(jira, jql)
 
+        # 统计完成和未完成的 Stories
         done_stories = sum(1 for issue in all_stories_issues if hasattr(issue.fields, 'status') and issue.fields.status.name.lower() == 'done')
         not_done_stories = len(all_stories_issues) - done_stories
         all_stories = len(all_stories_issues)
 
-        epic_data, epic_statistics = get_epic_data(project_name)
+        # 获取 Epics 及其统计数据
+        epics, epic_data, epic_statistics = get_epic_data(project_name)
+
+        # 获取 Sprint 数据
         sprint_data = get_sprint_data(project_name)
+
+        # 生成 Delivery 完成情况的数据和图表
+        label_data = get_delivery_data(epics)
+        delivery_plot_url = create_delivery_plot(label_data)
 
         # 筛选出 Sprint 不为空且状态未完成的 Story
         stories_with_sprints = []
@@ -229,10 +319,10 @@ def project_stats():
             if hasattr(story.fields, 'sprint') and story.fields.sprint and hasattr(story.fields, 'status') and story.fields.status.name.lower() != 'done':
                 stories_with_sprints.append(story)
 
-        # 创建 Story 图表
+        # 创建 Story 完成情况的图表
         story_plot_url = create_story_plot(project_name, all_stories, done_stories, not_done_stories)
 
-        # 创建 Epic 图表
+        # 创建 Epic 完成情况的图表
         fig, (ax3, ax4) = plt.subplots(1, 2, figsize=(14, 6))
         fig.suptitle('Epic 完成情况', fontsize=16, fontweight='bold')
 
@@ -271,7 +361,7 @@ def project_stats():
         epic_plot_url = base64.b64encode(buf.getvalue()).decode('utf8')
         plt.close()
 
-        # 创建 Sprint 图表
+        # 创建 Sprint 完成情况的图表
         fig, ax5 = plt.subplots(figsize=(10, 6))
         fig.suptitle('Sprint 完成情况', fontsize=16, fontweight='bold')
 
@@ -284,7 +374,7 @@ def project_stats():
         bars_total = ax5.bar(sprint_names, total_stories, label='Total Stories', color='lightblue')
         bars_completed = ax5.bar(sprint_names, completed_stories, label='Completed Stories', color='green')
 
-        # 在柱状图上标记Story数量和完成百分比
+        # 在柱状图上标记 Story 数量和完成百分比
         for bar_total, bar_completed, total, completed in zip(bars_total, bars_completed, total_stories, completed_stories):
             height_total = bar_total.get_height()
             height_completed = bar_completed.get_height()
@@ -301,7 +391,7 @@ def project_stats():
         ax5.set_title('Sprint Completion Statistics')
         ax5.legend()
 
-        # 保存图表
+        # 保存 Sprint 图表
         buf = io.BytesIO()
         plt.savefig(buf, format='png')
         buf.seek(0)
@@ -309,8 +399,10 @@ def project_stats():
         plt.close()
 
         return render_template('project_stats.html', projects=projects, project_name=project_name, 
-                               story_plot_url=story_plot_url, epic_plot_url=epic_plot_url, sprint_plot_url=sprint_plot_url, 
-                               epic_data=epic_data, sprint_data=sprint_data, stories_with_sprints=stories_with_sprints)
+                               story_plot_url=story_plot_url, epic_plot_url=epic_plot_url, 
+                               sprint_plot_url=sprint_plot_url, delivery_plot_url=delivery_plot_url,
+                               epic_data=epic_data, sprint_data=sprint_data, 
+                               stories_with_sprints=stories_with_sprints)
     except JIRAError as e:
         print(f"Error generating project statistics: {e}")
         if "HTTP 502" in str(e):
@@ -319,8 +411,5 @@ def project_stats():
 
 
 
-
-
 if __name__ == '__main__':
-    #app.run(debug=True)
     app.run(host='0.0.0.0', port=5000, debug=True)
