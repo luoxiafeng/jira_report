@@ -10,49 +10,65 @@
 <!-- Story 完成情况 -->
 <h4 onclick="toggleVisibility('storySection')" style="cursor: pointer; color: blue;">Story 完成情况</h4>
 <div id="storySection" style="display: none;">
-    <img src="data:image/png;base64,{{ story_plot_url }}" alt="Story Statistics">
+    <div class="chart-container">
+        <div class="chart-item">
+            <img src="data:image/png;base64,{{ story_plot_url }}" alt="Story Statistics">
+        </div>
+        <div class="chart-item">
+            <img src="data:image/png;base64,{{ story_completion_pie_url }}" alt="Story Completion Pie Chart">
+        </div>
+    </div>
 </div>
 
 <!-- Epic 完成情况 -->
 <h4 onclick="toggleVisibility('epicSection')" style="cursor: pointer; color: blue;">Epic 完成情况</h4>
 <div id="epicSection" style="display: none;">
-    <img src="data:image/png;base64,{{ epic_plot_url }}" alt="Epic Statistics">
-    <table class="table table-striped" id="epicTable">
-        <thead>
-            <tr>
-                <th onclick="sortTable(0)">Issue Key</th>
-                <th onclick="sortTable(1)">Summary</th>
-                <th onclick="sortTable(2)">Status</th>
-                <th onclick="sortTable(3)">Target Version</th>
-                <th onclick="sortTable(4)">Story Count</th>
-                <th onclick="sortTable(5)">Completion Percentage</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for epic in epic_data %}
-            <tr class="epic-row">
-                <td>{{ epic['Issue Key'] }}</td>
-                <td>{{ epic['Summary'] }}</td>
-                <td 
-                    {% if epic['Status'] == 'Done' %}
-                        style="background-color: blue; color: white;"
-                    {% elif epic['Status'] == 'In Progress' %}
-                        style="background-color: green; color: white;"
-                    {% elif epic['Status'] == 'To Do' %}
-                        style="background-color: red; color: white;"
-                    {% elif epic['Status'] == 'Pending' %}
-                        style="background-color: yellow; color: black;"
-                    {% endif %}
-                >
-                    {{ epic['Status'] }}
-                </td>
-                <td>{{ epic['Target Version'] }}</td>
-                <td>{{ epic['Story Count'] }}</td>
-                <td>{{ epic['Completion Percentage'] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="chart-container">
+        <div class="chart-item">
+            <img src="data:image/png;base64,{{ epic_plot_url }}" alt="Epic Statistics">
+        </div>
+        <div class="chart-item">
+            <img src="data:image/png;base64,{{ epic_completion_pie_url }}" alt="Epic Completion Pie Chart">
+        </div>
+    </div>
+    <div id="epicTableSection">
+        <table class="table table-striped" id="epicTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">Issue Key</th>
+                    <th onclick="sortTable(1)">Summary</th>
+                    <th onclick="sortTable(2)">Status</th>
+                    <th onclick="sortTable(3)">Target Version</th>
+                    <th onclick="sortTable(4)">Story Count</th>
+                    <th onclick="sortTable(5)">Completion Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for epic in epic_data %}
+                <tr class="epic-row">
+                    <td>{{ epic['Issue Key'] }}</td>
+                    <td>{{ epic['Summary'] }}</td>
+                    <td 
+                        {% if epic['Status'] == 'Done' %}
+                            style="background-color: blue; color: white;"
+                        {% elif epic['Status'] == 'In Progress' %}
+                            style="background-color: green; color: white;"
+                        {% elif epic['Status'] == 'To Do' %}
+                            style="background-color: red; color: white;"
+                        {% elif epic['Status'] == 'Pending' %}
+                            style="background-color: yellow; color: black;"
+                        {% endif %}
+                    >
+                        {{ epic['Status'] }}
+                    </td>
+                    <td>{{ epic['Target Version'] }}</td>
+                    <td>{{ epic['Story Count'] }}</td>
+                    <td>{{ epic['Completion Percentage'] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- Sprint 完成情况 -->
@@ -88,6 +104,14 @@
 </div>
 
 <style>
+    .chart-container {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+    }
+    .chart-item {
+        flex: 1;
+    }
     /* 悬停时改变表格行的背景色为天蓝色 */
     .epic-row:hover, .sprint-row:hover {
         background-color: #87CEEB; /* 天蓝色 */

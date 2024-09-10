@@ -134,7 +134,6 @@ def get_epic_data(project_name):
         print(f"Error fetching epic data for project {project_name}: {e}")
         return [], [], {'total': 0, 'completed': 0, 'incomplete': 0}
 
-
 def get_sprint_data(project_name):
     try:
         boards = get_boards(project_name)
@@ -199,7 +198,6 @@ def get_delivery_data(epics):
 
     return label_data
 
-
 def create_delivery_plot(label_data):
     """
     根据 label 数据创建 Delivery 完成情况的柱状图。
@@ -249,8 +247,6 @@ def create_delivery_plot(label_data):
 
     return delivery_plot_url
 
-
-
 def create_story_plot(project_name, all_stories, done_stories, not_done_stories):
     fig, ax = plt.subplots(figsize=(8, 6))
     fig.suptitle('Story 完成情况', fontsize=16, fontweight='bold')
@@ -281,10 +277,49 @@ def create_story_plot(project_name, all_stories, done_stories, not_done_stories)
 
     return story_plot_url
 
+def create_story_completion_pie_chart(done_stories, not_done_stories):
+    """
+    创建Story完成情况的饼图，与Epic饼图保持一致的风格。
+
+    Parameters:
+    done_stories : int
+        已完成的Story数量。
+    not_done_stories : int
+        未完成的Story数量。
+
+    Returns:
+    str
+        图像的Base64编码URL。
+    """
+    story_sizes = [done_stories, not_done_stories]
+    story_labels = ['Completed', 'Incomplete']
+    explode = (0.1, 0)  # 分离第一个部分
+    colors = ['green', 'red']
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    fig.suptitle('Story 完成情况', fontsize=16, fontweight='bold')
+
+    if sum(story_sizes) > 0:
+        ax.pie(story_sizes, explode=explode, labels=story_labels, autopct='%1.1f%%', colors=colors, 
+               shadow=True, startangle=140)
+        ax.set_title('Story Completion Percentage')
+    else:
+        ax.text(0.5, 0.5, 'No data to display', horizontalalignment='center', 
+                verticalalignment='center', transform=ax.transAxes)
+        ax.set_title('Story Completion Percentage')
+
+    # 保存图表
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    story_completion_pie_url = base64.b64encode(buf.getvalue()).decode('utf8')
+    plt.close()
+
+    return story_completion_pie_url
+
 @app.route('/')
 def home():
     return render_template('index.html', projects=projects)
-
 
 @app.route('/project_stats')
 def project_stats():
@@ -321,6 +356,9 @@ def project_stats():
 
         # 创建 Story 完成情况的图表
         story_plot_url = create_story_plot(project_name, all_stories, done_stories, not_done_stories)
+
+        # 创建 Story 完成情况的饼图
+        story_completion_pie_url = create_story_completion_pie_chart(done_stories, not_done_stories)
 
         # 创建 Epic 完成情况的图表
         fig, (ax3, ax4) = plt.subplots(1, 2, figsize=(14, 6))
@@ -402,14 +440,13 @@ def project_stats():
                                story_plot_url=story_plot_url, epic_plot_url=epic_plot_url, 
                                sprint_plot_url=sprint_plot_url, delivery_plot_url=delivery_plot_url,
                                epic_data=epic_data, sprint_data=sprint_data, 
-                               stories_with_sprints=stories_with_sprints)
+                               stories_with_sprints=stories_with_sprints,
+                               story_completion_pie_url=story_completion_pie_url)
     except JIRAError as e:
         print(f"Error generating project statistics: {e}")
         if "HTTP 502" in str(e):
             return "The JIRA server is currently unavailable (HTTP 502). Please try again later.", 502
         return "An error occurred while generating the project statistics. Please try again later.", 500
-
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
